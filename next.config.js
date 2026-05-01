@@ -1,4 +1,7 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {}
+const nextConfig = {
+  // Vercel এ স্বয়ংক্রিয়ভাবে environment variables কাজ করবে
+  reactStrictMode: true,
+};
 
-module.exports = nextConfig
+export default nextConfig;
