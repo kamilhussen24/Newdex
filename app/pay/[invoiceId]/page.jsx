@@ -1,42 +1,41 @@
-'use client';
+'use client'
 // app/pay/[invoiceId]/page.jsx
 
-import { useState } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useState } from 'react'
+import { useParams, useSearchParams } from 'next/navigation'
 
 export default function PaymentPage() {
-  const params = useParams();
-  const searchParams = useSearchParams();
+  const params = useParams()
+  const searchParams = useSearchParams()
 
-  const invoiceId = params.invoiceId;
-  const amount = searchParams.get('amount') || '0.01';
-  const currency = searchParams.get('currency') || 'USDT';
-  const description = searchParams.get('desc') || 'Payment';
+  const invoiceId = params.invoiceId
+  const amount = searchParams.get('amount') || '0.01'
+  const currency = searchParams.get('currency') || 'USDT'
 
-  const BINANCE_UID = process.env.NEXT_PUBLIC_BINANCE_UID || 'YOUR_UID';
-  const MERCHANT_NAME = process.env.NEXT_PUBLIC_MERCHANT_NAME || 'Your Shop';
-  const MERCHANT_SHORT = MERCHANT_NAME.slice(0, 2).toUpperCase();
+  const BINANCE_UID = process.env.NEXT_PUBLIC_BINANCE_UID || 'YOUR_UID'
+  const MERCHANT_NAME = process.env.NEXT_PUBLIC_MERCHANT_NAME || 'My Shop'
+  const MERCHANT_SHORT = MERCHANT_NAME.slice(0, 2).toUpperCase()
 
-  const [orderId, setOrderId] = useState('');
-  const [uiState, setUiState] = useState('idle'); // idle | loading | success | error | duplicate
-  const [statusMsg, setStatusMsg] = useState('');
-  const [payData, setPayData] = useState(null);
+  const [orderId, setOrderId] = useState('')
+  const [uiState, setUiState] = useState('idle')
+  const [statusMsg, setStatusMsg] = useState('')
+  const [payData, setPayData] = useState(null)
 
   async function handleVerify() {
-    const trimmed = orderId.trim();
+    const trimmed = orderId.trim()
     if (!trimmed) {
-      setUiState('error');
-      setStatusMsg('Please enter your Binance Order ID');
-      return;
+      setUiState('error')
+      setStatusMsg('Please enter your Binance Order ID')
+      return
     }
     if (!/^\d{10,}$/.test(trimmed)) {
-      setUiState('error');
-      setStatusMsg('Invalid Order ID format');
-      return;
+      setUiState('error')
+      setStatusMsg('Invalid Order ID format')
+      return
     }
 
-    setUiState('loading');
-    setStatusMsg('Verifying payment...');
+    setUiState('loading')
+    setStatusMsg('Verifying payment...')
 
     try {
       const res = await fetch('/api/pay/verify', {
@@ -48,29 +47,29 @@ export default function PaymentPage() {
           expectedAmount: amount,
           expectedCurrency: currency,
         }),
-      });
+      })
 
-      const json = await res.json();
+      const json = await res.json()
 
       if (json.status === 'success') {
-        setUiState('success');
-        setStatusMsg('Payment Verified Successfully');
-        setPayData(json.data);
+        setUiState('success')
+        setStatusMsg('Payment Verified Successfully')
+        setPayData(json.data)
       } else if (json.code === 'ORDER_DUPLICATE') {
-        setUiState('duplicate');
-        setStatusMsg('This Order ID is already used');
+        setUiState('duplicate')
+        setStatusMsg('This Order ID is already used')
       } else {
-        setUiState('error');
-        setStatusMsg(json.message || 'Verification failed');
+        setUiState('error')
+        setStatusMsg(json.message || 'Verification failed')
       }
     } catch {
-      setUiState('error');
-      setStatusMsg('Network error. Please try again.');
+      setUiState('error')
+      setStatusMsg('Network error. Please try again.')
     }
   }
 
   function copy(text) {
-    navigator.clipboard.writeText(text);
+    navigator.clipboard.writeText(text)
   }
 
   const bannerColor = {
@@ -78,7 +77,7 @@ export default function PaymentPage() {
     duplicate: '#ef4444',
     success: '#22c55e',
     loading: '#3b82f6',
-  };
+  }
 
   return (
     <div style={{
@@ -91,7 +90,7 @@ export default function PaymentPage() {
       fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     }}>
 
-      {/* ── Top Card (Logo + Banner) ── */}
+      {/* ── Top Card ── */}
       <div style={{
         width: '100%',
         maxWidth: '440px',
@@ -102,8 +101,6 @@ export default function PaymentPage() {
         marginBottom: '12px',
         textAlign: 'center',
       }}>
-
-        {/* Status Banner */}
         {uiState !== 'idle' && (
           <div style={{
             background: bannerColor[uiState] || '#3b82f6',
@@ -117,37 +114,22 @@ export default function PaymentPage() {
             gap: '8px',
             fontSize: '15px',
             fontWeight: '600',
-            letterSpacing: '0.2px',
           }}>
-            {uiState === 'loading' && (
-              <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>⏳</span>
-            )}
             {uiState === 'success' && '✓'}
             {(uiState === 'error' || uiState === 'duplicate') && '✕'}
+            {uiState === 'loading' && '⏳'}
             {statusMsg}
           </div>
         )}
 
-        {/* Binance Branding */}
+        {/* Binance Logo */}
+        <div style={{ fontSize: '32px', color: '#F0B90B' }}>◆</div>
         <div style={{
-          display: 'inline-flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '2px',
-        }}>
-          <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-            <path d="M18 4L22.5 8.5L18 13L13.5 8.5L18 4Z" fill="#F0B90B"/>
-            <path d="M10 12L14.5 16.5L10 21L5.5 16.5L10 12Z" fill="#F0B90B"/>
-            <path d="M26 12L30.5 16.5L26 21L21.5 16.5L26 12Z" fill="#F0B90B"/>
-            <path d="M18 20L22.5 24.5L18 29L13.5 24.5L18 20Z" fill="#F0B90B"/>
-          </svg>
-          <span style={{
-            fontSize: '22px',
-            fontWeight: '900',
-            color: '#F0B90B',
-            letterSpacing: '3px',
-          }}>BINANCE</span>
-        </div>
+          fontSize: '24px',
+          fontWeight: '900',
+          color: '#F0B90B',
+          letterSpacing: '3px',
+        }}>BINANCE</div>
       </div>
 
       {/* ── Payment Details Card ── */}
@@ -160,8 +142,7 @@ export default function PaymentPage() {
         boxShadow: '0 4px 24px rgba(0,0,0,0.07)',
         marginBottom: '12px',
       }}>
-
-        {/* Merchant Row */}
+        {/* Merchant + Amount */}
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -180,7 +161,6 @@ export default function PaymentPage() {
               color: '#F0B90B',
               fontSize: '18px',
               fontWeight: '800',
-              letterSpacing: '-1px',
             }}>
               {MERCHANT_SHORT}
             </div>
@@ -194,38 +174,24 @@ export default function PaymentPage() {
             </div>
           </div>
 
-          {/* Amount Badge */}
           <div style={{
             background: '#f0fdf4',
             border: '1.5px solid #86efac',
             borderRadius: '12px',
-            padding: '10px 16px',
+            padding: '10px 14px',
             textAlign: 'right',
           }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              justifyContent: 'flex-end',
-            }}>
-              <span style={{ fontSize: '18px' }}>🟢</span>
-              <span style={{ fontWeight: '800', fontSize: '20px', color: '#111' }}>
-                {amount}
-              </span>
-              <span style={{ fontWeight: '700', fontSize: '14px', color: '#16a34a' }}>
-                {currency}
-              </span>
+            <div style={{ fontWeight: '800', fontSize: '20px', color: '#111' }}>
+              {amount} <span style={{ fontSize: '13px', color: '#16a34a' }}>{currency}</span>
             </div>
-            <div style={{ color: '#9ca3af', fontSize: '11px', marginTop: '2px' }}>
-              Amount
-            </div>
+            <div style={{ color: '#9ca3af', fontSize: '11px' }}>Amount</div>
           </div>
         </div>
 
         {/* Binance ID Box */}
-        <div style={{ marginBottom: '16px' }}>
+        <div style={{ marginBottom: '14px' }}>
           <div style={{
-            fontSize: '13px',
+            fontSize: '12px',
             fontWeight: '600',
             color: '#6b7280',
             marginBottom: '8px',
@@ -243,57 +209,26 @@ export default function PaymentPage() {
             justifyContent: 'space-between',
             alignItems: 'center',
           }}>
-            <span style={{
-              fontWeight: '700',
-              fontSize: '18px',
-              color: '#111',
-              letterSpacing: '0.5px',
-            }}>
+            <span style={{ fontWeight: '700', fontSize: '18px', color: '#111' }}>
               {BINANCE_UID}
             </span>
-            <div style={{ display: 'flex', gap: '6px' }}>
-              {/* QR icon */}
-              <button
-                onClick={() => {}}
-                style={{
-                  background: '#f3f4f6',
-                  border: 'none',
-                  borderRadius: '8px',
-                  width: '36px',
-                  height: '36px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '18px',
-                }}
-              >⊞</button>
-              {/* Copy icon */}
-              <button
-                onClick={() => copy(BINANCE_UID)}
-                style={{
-                  background: '#f3f4f6',
-                  border: 'none',
-                  borderRadius: '8px',
-                  width: '36px',
-                  height: '36px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '16px',
-                }}
-              >📋</button>
-            </div>
+            <button
+              onClick={() => copy(BINANCE_UID)}
+              style={{
+                background: '#f3f4f6',
+                border: 'none',
+                borderRadius: '8px',
+                width: '36px',
+                height: '36px',
+                cursor: 'pointer',
+                fontSize: '16px',
+              }}
+            >📋</button>
           </div>
         </div>
 
         {/* Steps */}
-        <div style={{
-          background: '#f9fafb',
-          borderRadius: '12px',
-          padding: '14px 16px',
-        }}>
+        <div style={{ background: '#f9fafb', borderRadius: '12px', padding: '14px 16px' }}>
           {[
             'Open Binance',
             <span key="s">Tap <b>Send</b></span>,
@@ -304,27 +239,20 @@ export default function PaymentPage() {
           ].map((step, i) => (
             <div key={i} style={{
               display: 'flex',
-              alignItems: 'flex-start',
               gap: '10px',
               marginBottom: i < 5 ? '9px' : 0,
               fontSize: '14px',
               color: '#374151',
               lineHeight: '1.5',
             }}>
-              <span style={{
-                color: '#F0B90B',
-                fontWeight: '900',
-                fontSize: '16px',
-                lineHeight: '1.4',
-                flexShrink: 0,
-              }}>•</span>
+              <span style={{ color: '#F0B90B', fontWeight: '900', flexShrink: 0 }}>•</span>
               <span>{step}</span>
             </div>
           ))}
         </div>
       </div>
 
-      {/* ── Input + Button / Success Card ── */}
+      {/* ── Input Card / Success Card ── */}
       {uiState !== 'success' ? (
         <div style={{
           width: '100%',
@@ -344,14 +272,12 @@ export default function PaymentPage() {
               width: '100%',
               padding: '15px 16px',
               borderRadius: '12px',
-              border: `1.5px solid ${uiState === 'error' || uiState === 'duplicate' ? '#fca5a5' : '#e5e7eb'}`,
+              border: `1.5px solid ${(uiState === 'error' || uiState === 'duplicate') ? '#fca5a5' : '#e5e7eb'}`,
               fontSize: '15px',
-              color: '#111',
               marginBottom: '12px',
               outline: 'none',
               boxSizing: 'border-box',
               background: '#f9fafb',
-              transition: 'border-color 0.2s',
             }}
           />
           <button
@@ -360,9 +286,7 @@ export default function PaymentPage() {
             style={{
               width: '100%',
               padding: '16px',
-              background: uiState === 'loading'
-                ? '#9ca3af'
-                : 'linear-gradient(135deg, #1a1a2e 0%, #0f172a 100%)',
+              background: uiState === 'loading' ? '#9ca3af' : 'linear-gradient(135deg, #1a1a2e 0%, #0f172a 100%)',
               color: '#fff',
               border: 'none',
               borderRadius: '12px',
@@ -373,15 +297,12 @@ export default function PaymentPage() {
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              letterSpacing: '0.3px',
-              transition: 'opacity 0.2s',
             }}
           >
             🔒 {uiState === 'loading' ? 'Verifying...' : 'Secure Payment'}
           </button>
         </div>
       ) : (
-        /* ── Success Card ── */
         <div style={{
           width: '100%',
           maxWidth: '440px',
@@ -393,32 +314,19 @@ export default function PaymentPage() {
           boxShadow: '0 4px 24px rgba(34,197,94,0.15)',
         }}>
           <div style={{ fontSize: '48px', marginBottom: '12px' }}>✅</div>
-          <div style={{
-            fontSize: '22px',
-            fontWeight: '800',
-            color: '#15803d',
-            marginBottom: '20px',
-          }}>
+          <div style={{ fontSize: '22px', fontWeight: '800', color: '#15803d', marginBottom: '20px' }}>
             Payment Successful
           </div>
-          <div style={{
-            background: '#fff',
-            borderRadius: '12px',
-            padding: '16px',
-            textAlign: 'left',
-          }}>
+          <div style={{ background: '#fff', borderRadius: '12px', padding: '16px', textAlign: 'left' }}>
             {[
               ['Order ID', payData?.orderId],
               ['Amount', `${payData?.amount} ${payData?.currency}`],
               ['Payer', payData?.payerName],
-              ['Time', payData?.transactionTime
-                ? new Date(payData.transactionTime).toLocaleString()
-                : '-'],
+              ['Time', payData?.transactionTime ? new Date(payData.transactionTime).toLocaleString() : '-'],
             ].map(([label, value]) => (
               <div key={label} style={{
                 display: 'flex',
                 justifyContent: 'space-between',
-                alignItems: 'center',
                 padding: '8px 0',
                 borderBottom: '1px solid #f3f4f6',
                 fontSize: '14px',
@@ -431,25 +339,9 @@ export default function PaymentPage() {
         </div>
       )}
 
-      {/* Footer */}
-      <div style={{
-        marginTop: '24px',
-        color: '#9ca3af',
-        fontSize: '12px',
-        textAlign: 'center',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-      }}>
+      <div style={{ marginTop: '24px', color: '#9ca3af', fontSize: '12px' }}>
         🔒 Secured by Binance Pay
       </div>
-
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
-  );
+  )
 }
