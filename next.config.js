@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Vercel এ স্বয়ংক্রিয়ভাবে environment variables কাজ করবে
-  reactStrictMode: true,
+  output: 'export', // যদি শুধু স্ট্যাটিক + API function চান তাহলে এটা লাগবে না, বরং Cloudflare adapter নিজেই হ্যান্ডেল করে
 };
 
 export default nextConfig;
