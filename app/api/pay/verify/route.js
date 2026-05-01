@@ -1,17 +1,13 @@
 // app/api/pay/verify/route.js
 import { NextResponse } from 'next/server'
 import { findTransactionByOrderId } from '@/lib/binance'
-
-// Duplicate prevention (in-memory)
-// Production-এ Vercel KV ব্যবহার করুন
-const usedOrderIds = new Set()
+import { kv } from '@vercel/kv' // npm install @vercel/kv
 
 export async function POST(request) {
   try {
     const body = await request.json()
     const { orderId, expectedAmount, expectedCurrency = 'USDT', invoiceId } = body
 
-    // ── Validation ──
     if (!orderId) {
       return NextResponse.json({
         status: 'error',
@@ -26,8 +22,10 @@ export async function POST(request) {
       }, { status: 400 })
     }
 
-    // ── Duplicate check ──
-    if (usedOrderIds.has(orderId)) {
+    // ── Persistent duplicate check ──
+    const usedKey = `used_order:${orderId}`
+    const alreadyUsed = await kv.get(usedKey)
+    if (alreadyUsed) {
       return NextResponse.json({
         status: 'error',
         code: 'ORDER_DUPLICATE',
@@ -35,12 +33,11 @@ export async function POST(request) {
       }, { status: 409 })
     }
 
-    // ── Binance API থেকে transaction খোঁজো ──
     let transaction
     try {
       transaction = await findTransactionByOrderId(orderId.trim())
     } catch (apiErr) {
-      console.error('Binance API Error:', apiErr.message)
+      console.error('Binance API Error:', apiErr)
       return NextResponse.json({
         status: 'error',
         message: 'Binance API connection failed. Try again.',
@@ -54,32 +51,40 @@ export async function POST(request) {
       }, { status: 404 })
     }
 
-    // ── Amount verify ──
     const paidAmount = parseFloat(transaction.amount)
     const paidCurrency = transaction.currency
 
+    // ── Currency check ──
+    if (expectedCurrency && paidCurrency !== expectedCurrency) {
+      return NextResponse.json({
+        status: 'error',
+        message: `Currency mismatch. Required ${expectedCurrency}, received ${paidCurrency}`,
+      }, { status: 400 })
+    }
+
+    // ── Amount check ──
     if (expectedAmount) {
       const required = parseFloat(expectedAmount)
       if (paidAmount < required) {
         return NextResponse.json({
           status: 'error',
-          message: `Amount মিলছে না। প্রয়োজন: ${required} ${expectedCurrency}, পাওয়া গেছে: ${paidAmount} ${paidCurrency}`,
+          message: `Amount insufficient. Required: ${required} ${expectedCurrency}, received: ${paidAmount} ${paidCurrency}`,
         }, { status: 400 })
       }
+      // Optional: exact match
+      // if (Math.abs(paidAmount - required) > 0.0001) { ... }
     }
 
-    // ── Income check ──
     if (paidAmount <= 0) {
       return NextResponse.json({
         status: 'error',
-        message: 'এই transaction incoming payment নয়',
+        message: 'This transaction is not an incoming payment',
       }, { status: 400 })
     }
 
-    // ── Mark as used ──
-    usedOrderIds.add(orderId)
+    // ── Mark as used (expires after 24 hours) ──
+    await kv.set(usedKey, true, { ex: 86400 })
 
-    // ── Success ──
     return NextResponse.json({
       status: 'success',
       message: 'Payment Verified Successfully',
